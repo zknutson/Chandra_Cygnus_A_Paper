@@ -1,0 +1,331 @@
+\documentclass[trackchanges,twocolumn]{aastex701}
+
+\usepackage{placeins}
+
+\newcommand{\dvd}[1]{\textcolor{red}{[DvD: {#1}]}}
+\definecolor{darkgreen}{rgb}{0.0, 0.5, 0.0}
+\newcommand{\vlk}[1]{\textcolor{darkgreen}{[VLK: {#1}]}}
+
+\begin{document}
+
+\title{Sharpening the \textit{Chandra} X-ray View of Cygnus A's Nucleus: Deconvolution using Jolideco}
+
+\author[]{Zachary Knutson}
+\affiliation{Center for Astrophysics $|$ Harvard \& Smithsonian, Cambridge MA 02138 USA}
+\email[show]{zach.knutson7431@gmail.com}
+
+\author[orcid=0000-0002-0905-7375]{Aneta Siemiginowska}
+\affiliation{Center for Astrophysics $|$ Harvard \& Smithsonian, Cambridge MA 02138 USA}
+\email{asiemiginowska@cfa.harvard.edu}
+
+\author[orcid=0000-0003-4568-7005]{Axel Donath}
+\affiliation{Center for Astrophysics $|$ Harvard \& Smithsonian, Cambridge MA 02138 USA}
+\email{axel.donath@cfa.harvard.edu}
+
+\author[0000-0002-3869-7996]{Vinay Kashyap}
+\affiliation{Center for Astrophysics $|$ Harvard \& Smithsonian, Cambridge MA 02138 USA}
+\email{}
+
+\author[0000-0003-4428-7835]{D. Burke}
+\affiliation{Center for Astrophysics $|$ Harvard \& Smithsonian, Cambridge MA 02138 USA}
+\email{}
+
+\author[0000-0002-0816-331X]{David A.\ van Dyk}
+\affiliation{Department of Mathematics, Imperial College London, London SW7 2AZ UK}
+\email{}
+
+% \author[]{}
+% \altaffiliation{}
+% \affiliation{}
+% \email{}
+
+% \author[]{Axel Donath}
+% \altaffiliation{}
+% \affiliation{}
+% \email{}
+
+% \author[]{Axel Donath}
+% \altaffiliation{}
+% \affiliation{}
+% \email{}
+
+%% \collaboration{all}{}
+
+\begin{abstract}
+We present high-resolution X-ray image reconstructions of the nuclear region of Cygnus A using the deconvolution algorithm Jolideco, applied to \textit{Chandra} observations from 2015–2017 (ACIS) and 2021 (HRC). Jolideco performs joint likelihood deconvolution with a patch-based image prior informed by astronomical surveys, enabling reconstruction of spatial features in the presence of Poisson noise on sub-arcsecond scales. Using both simulated and empirical point spread functions (PSFs), we reconstruct broad-band X-ray images and narrow-band X-ray images in the soft and hard continuum, as well as specific X-ray emission lines (Ne IX/X, Si VII–XIII, Fe K$\alpha$, and Fe XXV/XXVI). The reconstructions reveal a clear biconical structure in the soft band aligned with the jet axis of Cygnus A, as well as extended emission exhibiting ring-like morphology surrounding a hard X-ray point source. Cross-comparison with JWST imaging shows strong agreement between Pa $\alpha$ emission and the X-ray bicone. No significant excess X-ray emission is detected at the known location of Cygnus A-2. Our results highlight the effectiveness of Jolideco for analyzing complex AGN environments and suggest broader applications across the \textit{Chandra} catalog.
+\end{abstract}
+\keywords{\uat{X-ray Active Galactic Nuclei}{2035} --- \uat{Astronomy Image Processing}{2306} --- \uat{Deconvolution}{1910} --- \uat{High Angular Resolution}{2167}}
+
+\section{Introduction}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/observations.pdf}
+    \caption{Top: ACIS observation ID 17509 binned at 0.125 ACIS pixels in both directions. Bottom: HRC observation ID 22536 binned at 0.134 ACIS pixels in both directions. ACIS observation ID 17509 has an on sky exposure time of 51.2 ks, while HRC observation ID 22536 has an on sky exposure time of 19.9 ks. As a result, the HRC observation has significantly fewer events, but a greater fraction of these events occur at lower energies, particularly below $\sim$1 keV. Both observations sample the nuclear region of Cygnus A. Due to pointing inaccuracies, the absolute astrometry is reported differently.}
+    \label{fig:observations}
+\end{figure}
+
+%\as{give the redshift of the source somewhere - could be a footnote or the final paragraph of the Introduction - show redshift z=?? and the scale 1 arcsec = 1kpc? for a given cosmology}
+
+%[What is an AGN? What is Cygnus A?]
+Active galactic nuclei (AGNs), powered by gas in-fall onto an accreting supermassive black hole at their center, are important natural laboratories for understanding high-energy astrophysical processes. One such AGN, Cygnus A, has been extremely important for understanding relativistic jets and all aspects of extreme galaxy activity. Discovered in the early days of radio astronomy \citep{hargrave_observations_1974}, Cygnus A is the most luminous radio galaxy in the local ($z<0.1$) universe \citep{carilli_cygnus_1996}. A prototypical Fanaroff-Riley Type-II (FRII; \cite{fanaroff_morphology_1974}) double radio galaxy, Cygnus A is ---unusually --- located in a cooling core cluster of galaxies \citep{arnaud_intracluster_1984,barthel_anomalous_1996,smith_chandra_2002} and within a high pressure core of the intracluster medium (ICM). The ICM interacts with Cygnus A's two collimated antiparallel relativistic jets to produce and confine the radio lobes. The resulting jet matter then forms cavities (or cocoons) in the ICM which expand at a rate related to the power of the jet. Cygnus A is a moderately powerful ($L_{bol} \approx 4 \times 10^{45}$ erg s$^{-1}$ \cite{privon_modeling_2012}) heavily obscured broad line quasar \citep{antonucci_evidence_1994,ogle_scattered_1997,djorgovski_discovery_1991}. However most of the energy from Cygnus A, estimated using dynamical modeling of the cocoon, originates from the jets $L_{j} \approx (0.75-3.6)\times10^{46}$ erg s$^{-1}$ \citep{ito_estimate_2008}.
+
+%\as{when you say 'extremely important' you need to say why, so describing all the components of the radio source on different physical scales would add to this statement, you need to describe/define cocoon as well}
+%[Recent Observations of Cygnus A]
+Being obscured by the host galaxy, the innermost regions of the AGN are not directly visible at soft X-ray ($<$ 2 keV) energies. Instead, soft X-ray emission from Cygnus A shows bipolar nebulosity that is associated with the jet activity \citep{young_chandra_2002}. In contrast, the hard band (2-7 keV) emission is an unresolved point source on a scale of $\leq 1$ arcsec ($\sim$1 kpc) \citep{young_chandra_2002}, and is consistent with quasar activity \citep{young_chandra_2002}. The ICM surrounding Cygnus A dominates the spectrum below $\sim 4$ keV \citep{reynolds_nustar_2015}. The hard (2-7 keV) emission is well modeled by a heavily absorbed power law spectrum with photon index $\Gamma_h \approx 1.5$, and $N_H \approx 2\times10^{23}$ cm$^{-2}$ \citep{young_chandra_2002}. Cygnus A's nuclear radio emission has also been studied in detail. Observations from the Jansky Very Large Array (VLA) at 18-48 GHz show a clear, bipolar, elongated structure with a total length of $\sim0.48$ arcsec ($\sim$528 pc) and a width of $\sim$0.26 arcsec ($\sim$286 pc) \citep{carilli_imaging_2019}. %[If we're able to resolve more of the torus and such I think I will want to talk about features of the spectrum]
+
+%[Brief Mention of Cygnus A 2]
+In addition to the central nuclear source, an additional transient source, named Cygnus A-2, was detected in radio with the VLA in 2015 \cite{perley_discovery_2017}. Cygnus A-2 is offset from the nucleus by $\sim0.42$ arcsec ($\sim$462 pc) to the southwest. Despite Cygnus A-2's radio detection, the transient source has not been observed in X-ray with \textit{Chandra} \citep{snios_late-time_2022,de_vries_evidence_2019}, with a 2-10 keV X-ray luminosity upper limit of $ \leq 8.6 \times 10^{42}$ erg s$^{-1}$ \citep{snios_late-time_2022}. Cygnus A-2 has also been observed in the NIR and MIR with JWST, but no significant thermal activity consistent with AGN or emission line activity was detected \citep{ogle_jwst_2025}.%[not really sure what we'll find yet, if we are able to set a tighter upper limit on the flux of Cygnus A-2, thinking I will want to talk about it more]
+
+
+% Need a reference to the empirical PSF
+%[Deconvolution and What is Jolideco]
+In this paper, we employ a novel deconvolution method, the joint likelihood deconvolution (Jolideco) code \citep{donath_joint_2024}, to better resolve the inner regions of the nucleus of Cygnus A using multiple \textit{Chandra} X-ray observations collected between 2015 and 2017. Jolideco performs deconvolution, which uses the shape of the point spread function (PSF) in combination with one or more counts images to reconstruct the true sky flux at scales smaller than the PSF. For \textit{Chandra}, a model of the PSF can be obtained either empirically --- using observations of known point sources --- or by using \textsc{marx} to simulate the telescope and instrument \citep{davis_raytracing_2012} \vlk{Wouldn't call the emprical PSF an "approximation" -- it's the raytraces that are the approximations, MARX more so than SAOsac.  Also, are you using ChaRT when you mean MARX?}. Typical of inverse problems such as deconvolution with Poisson noise, the optimal solution is not necessarily well defined, or even unique. 
+% Need to weed out optimal values (that are likely) which are not plausible
+Therefore, a major challenge of deconvolution is to narrow the parameter space of possible deconvolutions such that the most plausible reconstruction is generated. \dvd{This would be the strategy even if the solution where well defined / unique. There will always be uncertainty.} 
+
+Jolideco is also capable of reconstructing flux maps from multiple instruments. 
+%[Brief Description of What \textit{Chandra} Data we Have]
+In this paper, we combine observations collected using \textit{Chandra}'s ACIS-I detector with a $\sim0.5$ arcsec pixel size, with observations collected using \textit{Chandra}'s HRC-I dectector, with a substantially smaller $\sim0.13$ arcsec pixel size, which is able to sample \textit{Chandra}'s PSF at higher spatial resolution. This improved sampling supplied by the HRC-I dectector is capable of resolving more spatial detail in the resulting image (see Figure~\ref{fig:observations} \dvd{Do you see more detail in the bottom panel of Fig 1?}), but with the tradeoff of much poorer spectral resolution (ACIS: $\sim100$eV at 1.5 keV, HRC: $\sim1500$eV at 1.5 keV). With the spectral resolution supplied by the ACIS detector, spectral features such as the soft band continuum (0.5-2 keV), part of the non-thermal hard band continuum (2-5 keV) and energies around the iron K$\alpha$ fluorescence line at $\sim$6.4 keV (5-7 keV) \citep{young_chandra_2002} can be probed. When deconvolved, we expect that by spatially resolving these spectral features on the sub-arcsecond scale, we may learn more about the dust surrounding the core of Cygnus A and the X-ray morphology of the jets. We also combine ACIS and HRC observations; the combination will allow us to use the strengths of both instruments, resolving finer structure in the reconstruction than ACIS observations alone, with improved spectral resolution and a greater number of counts than only the HRC observations. %[I know that this paragraph will need to be refined as my project unfolds]
+
+%\as{The PSF is due to the scattering by the \textit{Chandra} mirrors and then the detectors have different resolutions, so effective resolving scales are different. Revise the text below accordingly}
+%\as{Perhaps add a paragraph below and include - the motivation for mapping the nuclear region of Cyg A focusing on the radiation processes -  Why do we try to deconvolve the images? Also add that we will obtain the images in different energy ranges to map structures on subarcsec scales and what we could potentially learn} --- Z.K, definitely still should do this, but also I don't really have the time to learn about the radiation processes right now. Perhaps we could discuss this!
+
+%[Disclaimer About Cosmology]
+Throughout this paper, we adopt a standard cosmology using a Hubble constant of $H_0 = 69.3$ km s$^{-1}$ Mpc$^{-1}$, $\Omega_M = 0.288$, $\Omega_\Lambda = 0.712$ \citep{hinshaw_nine-year_2013}. We use a redshift value of $z = 0.0561$ for Cygnus A \citep{stockton_continuum_1994}, resulting in a linear scale of 1.1 kpc per arcsecond, and a luminosity distance of $D_L = 253.2$ Mpc. 
+%[benefits of HRC, no pileup, better calibration]
+
+\dvd{Give a brief outline of the paper here?}
+
+%[the reprocessed events file needs to have attribute EDUSR on pix_adj in the fits header]
+%compare the ACIS to HRC at two 
+%look at the nonthermal emission
+%look at the line emission from the core
+%the underlying physics, why 
+%chris reynolds xmm paper they have iron line and can look at the emission whether it is spatially resolved, lower soft lines 
+
+
+%Need to add HRC observations to this table
+\FloatBarrier
+\section{Observations \& Data Reduction} \label{sec:data}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/empirical_marx_psf_comparison.pdf}
+    \caption{Both PSFs are weighed to the source spectrum of the nuclear region of Cygnus A in the energy range of 0.5 keV to 7.0 keV. Both PSFs are binned at 0.125 ACIS pixels in both directions. Note the PSF artifact present in the empirical PSF located towards the bottom right of the image, which does not appear in the \textsc{marx} PSF.}
+    \label{fig:PSF}
+\end{figure}
+
+\begin{deluxetable}{c c c c}[]
+    \tablehead{
+    \colhead{Date (UTC)} & \colhead{ObsID} & \colhead{Exposure (ks)} & \colhead{Roll angle (°)}
+    }
+    \tablecaption{Overview of the \textit{Chandra} observations with the nuclear region of Cygnus A close to the center of the aimpoint, which are used in the deconvolution process. Observations taken using the ACIS instrument are listed first, followed by observations taken using the HRC instrument.\label{tab:observations}}
+    \startdata
+        2015-10-28 & 17508 & 14.9 & 281.7\\
+        2015-11-01 & 18688 & 34.6 & 281.7\\
+        2016-06-13 & 18871 & 21.8 & 146.2\\
+        2016-06-18 & 17133 & 30.2 & 146.2\\
+        2016-06-26 & 17510 & 37.3 & 156.3\\
+        2016-07-10 & 17509 & 51.2 & 170.4\\
+        2016-08-15 & 17513 & 49.1 & 209.5\\
+        2016-09-15 & 17512 & 66.9 & 242.1\\
+        2016-11-12 & 17507 & 32.4 & 295.3\\
+        2016-12-13 & 17514 & 49.4 & 332.2\\
+        2017-01-20 & 17135 & 19.8 & 8.2\\
+        2017-01-26 & 17136 & 22.2 & 8.2\\
+        2017-01-28 & 19996 & 28.6 & 8.2\\
+        2017-02-12 & 19989 & 41.5 & 29.7\\
+        2017-05-10 & 17511 & 15.9 & 105.2\\
+        2017-05-13 & 20077 & 27.7 & 105.2\\
+        2017-05-20 & 17134 & 29.4 & 126.2\\
+        2017-05-21 & 20079 & 23.8 & 126.2\\
+        \hline
+        \multicolumn{2}{r}{ACIS Total}& 595.7\\
+        \hline
+        2021-05-04 & 22536 & 19.9 & 99.9\\
+        2021-05-05 & 25020 & 19.9 & 110.1\\
+        2021-05-07 & 25021 & 19.9 & 111.9\\
+        \hline
+        \multicolumn{2}{r}{HRC Total} & 59.7\\
+        \hline
+         & Total & 655.4\\
+    \enddata
+\end{deluxetable}
+
+There is a total of 2.2 Ms of \textit{Chandra} exposure time available for Cygnus A. Since \textit{Chandra}'s PSF varies significantly with source location in the telescope field of view, we only select observations which focused on the nucleus to minimize the size of the PSF. Additionally, in observations taken between 2000 and 2005, 
+% AS: This is due to the defocus observations with SIM_Z offset  larger than 10 mm.
+an irregular, non-point like shape is observed in the PSF \citep{de_vries_evidence_2019}. Therefore, we only use the 21 observations enumerated in Table \ref{tab:observations}, which total 595.6 ks of ACIS exposure across 18 observations between 2015 and 2017, and, more recently, 59.7 ks of HRC exposure across 3 observations collected in 2021. These observations were taken at a variety of roll angles, which enables better sampling of the PSF, since the PSF is not axisymmetric. 
+% reorganize so that I am talking about the parameters we put in the workflow, then just say that we use the workflow
+
+%give the full model description, then just say that Young also made a fit using this model
+
+%we're constructing the background spectrum
+%counts in the annulus scaled to the source area
+All of the observations have been reprocessed with \textsc{caio 4.17} and \textsc{caldb 4.12.0} \citep{fruscione_ciao_2006}. Jolideco requires counts maps for each observation which contains the region surrounding Cygnus A. We generate a counts map for each observation with \textit{reproject\_events} \dvd{Is this a software command? Try to clarify.}. For both ACIS and HRC observations, we use a $10\times 10$ arcsec square cut out centered on the astrometric position of the nucleus $\alpha_{\rm nuc}$ = 19:59:28.3560, $\delta_{\rm nuc}$ = +40:44:02.096 \citep{hunt_imaging_2021}. The ACIS observations are binned at a 0.125 ACIS pixel size in both dimensions, corresponding to a counts map pixel size of $\sim$62.5 mas (69 pc). The HRC observations are binned at a 0.125 nominal HRC pixel size ($\sim$0.0335 ACIS pixels) in both dimensions, corresponding to a counts map pixel size of $\sim$16.7 mas (18 pc). A circular cutout with a radius of 2 arc seconds and centered on the astrometric position of the nucleus was used to generate a spectrum of the source. We then generate a spectral model of the source using \textit{Sherpa}, using the same dual absorbed power law model definition as determined in \cite{young_chandra_2002}. \dvd{This is confusing. Did you use Young's model, but compute its parameter values by fitting your data?}. We are able to well approximate the overall spectral shape using the sum of a heavily absorbed power law $\Gamma = 0.59$, $N_H$=1.6$\times 10^{23}$(cm$^{-2}$), and a relatively unobscured power law $\Gamma = 1.89$, $N_H$=2.9$\times 10^{21}$(cm$^{-2}$), as well as a gaussian model of the iron K$\alpha$ line observed at 6.1 keV. We then use this spectral model to estimate the exposure map using \textit{fluximage} \dvd{say what this is}. The background \dvd{spatial? spectral? both?} is estimated based off of the counts density \dvd{density? mabye just ``based on the counts''} in an annulus centered on the astrometric position of the nucleus with an inner radius of 3 arc seconds and an outer radius of 20 arc seconds. This background region contains some contribution from the hot ICM.
+
+We use the simulation tool \textsc{marx} \citep{davis_raytracing_2012} to simulate the shape of the PSF, given the spectral model of the source. We also utilize an empirical PSF, generated using a collection of ACIS observations of faint, on axis known point sources. This PSF is then corrected to each observation by rotating it to the proper roll angle and, in the case of HRC, is also scaled by a factor of $\sim3.74$, equal to the ratio in bin size between the native 0.125 ACIS pixel binning to the 0.125 HRC pixel binning. The empirical PSF has been calibrated to the source spectrum of the nuclear region of Cygnus A between 0.5 and 7.0 keV. The modeled PSF, as well as the empirical PSF are shown in Figure \ref{fig:PSF}.
+
+\FloatBarrier
+\section{Model Specifications: Jolideco} \label{sec:methods}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/continuum_results.pdf}
+    \caption{Results of Jolideco reconstruction on the observations enumerated in Table \ref{tab:observations}, demonstrating differences in the spatial distribution of the X-ray continuum.  We show reconstructions utilizing both the simulated \textsc{marx} PSF, and the weighed 0.5-7 keV empirical PSF. Reconstructed flux is binned at 0.06125 ACIS pixels ($\sim$31 mas, $\sim$35 pc) in both directions, corresponding to $\rho$=2. A scale bar of 1 arcsecond is shown in the bottom right. The 0.5-7 keV, 2.0-5.0 keV, and 5.0-7.0 keV bands each use the same image normalization, while the 0.5-2.0 keV band has been enhanced to show the features present at much lower flux densities.}
+    \label{fig:continuum}
+\end{figure*}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/soft_lines_results.pdf}
+    \caption{Jolideco reconstructions of the observations enumerated in Table \ref{tab:observations} for narrow-band cuts of the soft X-ray continuum. The center column shows the reconstructed flux in the energy filter which contains the Ne IX triplet and Ne X transitions, while the right column shows the reconstruction containing the Si VII-Si XIII transitions. These reconstructions are analogous to the reconstructions presented in Figure \ref{fig:continuum}, notably still using $\rho = 2$ and 0.06125 ACIS pixel ($\sim$31 mas, $\sim$35 pc) binning in both directions. A scale bar of 1 arcsecond is shown in the bottom right. All reconstructions use the same image scaling.}
+    \label{fig:lines-soft}
+\end{figure*}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/hard_lines_results.pdf}
+    \caption{Jolideco image reconstructions of narrow-band cuts in the hard X-ray continuum. All reconstructions are analagous to the reconstructions presented in Figure \ref{fig:continuum}, using $\rho = 2$ and 0.06125 ACIS pixel ($\sim$31 mas, $\sim$35 pc) binning in both directions. The central column's energy band contains the Fe K$\alpha$ fluorescence line (6.4 keV rest-frame; 6.06 keV observed \cite{reynolds_nustar_2015}) while the right panel contains the radiative recombination lines of iron-25 and iron-26 (6.67 and 6.97 keV rest-frame; 6.32 and 6.60 keV observed \cite{reynolds_nustar_2015}). A scale bar of 1 arcsecond is shown in the bottom right. All reconstructions use the same image scaling.}
+    \label{fig:lines-hard}
+\end{figure*}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/hrc_jolideco.pdf}
+    \caption{Jolideco flux reconstruction using the 3 HRC observations enumerated in \ref{tab:observations}. The observations span the complete energy range observed (roughly 0.3-7 keV) and are centered on the nuclear region of Cygnus A. Reconstructed flux is binned at $\sim$0.0335 ACIS pixels ($\sim$16.7 mas, $\sim$18 pc) in both directions, and $\rho$=1.}
+    \label{fig:hrc}
+\end{figure}
+
+Our goal is to reconstruct a true sky flux image, given knowledge on the PSF and several Poisson-regime realizations (counts images) of the true sky flux image forward folded (or convolved) with the PSF (see Figure 1 in \cite{donath_joint_2024}). We assume that over the timescale of the observations, the true sky flux image does not change significantly. Given a single observation $j$ of an unknown-flux image $x$ and assuming the noise in each pixel $i$ in the recorded counts image $D_j$ follow independent Poisson distributions with expectation $\lambda_j$, the likelihood $P$ of obtaining the measured image with $N$ pixels is given by
+\begin{equation}
+    P(D_j|\lambda_j)=\prod^N_{i=1}\frac{e^{-\lambda_{j,i}}\lambda_{i,j}^{D_{j,i}}}{D_{j,i}!}
+    \label{eqn:base}
+\end{equation}
+where $\lambda_j$ depends on $x$ as defined by Equation \ref{eqn:base}. We then can take the logarithm, multiply by -1, and drop the constant terms to transform the product into a sum over pixels, which is also often called the “Cash” \citep{cash_parameter_1979} fit statistics:
+\begin{equation}
+    \mathcal{C}(D_j|\lambda_j(x))=\sum^{N_j}_{i=1}(\lambda_{j,i}-D_{j,i}\log\lambda_{j,i}).
+    \label{eqn:cash}
+\end{equation}
+Then, we can sum over all of the observations to obtain the (negative) joint log-likelihood of measuring a set of counts images $D$ given an unknown-flux image $x$:
+\begin{equation}
+    \mathcal{L}(D|x) = \sum^J_{j=1}\mathcal{C}(D_j|\lambda_j(x)).
+    \label{eqn:likelihood}
+\end{equation}
+
+To obtain a maximum likelihood estimate (MLE), one could in principle directly optimize Equation \ref{eqn:likelihood}. In fact, this is the goal of one such method of deconvolution in the presence of Poisson noise, proposed independently by \cite{richardson_bayesian-based_1972} and \cite{lucy_iterative_1974}, often referred to as the Richardson-Lucy method (hereafter the RL method). However, the RL method is limited in that many different solutions may share a numerically similar log-likelihood value. In that way, the deconvolution in the presence of Poisson noise is an ``ill-posed inverse problem". Using the RL method, it is unclear when the model has converged, and further iterations tend to cause the reconstructed flux image to decompose into point sources. 
+
+In an attempt to improve the stability and to introduce a clear convergence criteria to the RL method, we introduce a prior likelihood distribution which introduces some correlations with nearby pixels. Introducing this prior distribution, we arrive at the (negative) log-prior distribution $\mathcal{L}$:
+\begin{equation}
+    \mathcal{L}(x|D)=\sum^J_{j=1}\mathcal{C}(D_j|\lambda_j(x))-\beta \cdot \mathcal{P}(x)
+    \label{eqn:prior}
+\end{equation}
+where $\mathcal{C}(D_j|\lambda_j(x))$ represents the summed log-likelihood for an individual observation $j$, and $\mathcal{P}(x)$ represents the log of the prior distribution, with the user defined scaling factor $\beta$ adjusting the weight of the prior relative to the joint log-likelihood term. 
+
+Jolideco uses gaussian mixture models (GMMs) trained on a patch library of high signal to noise astronomical images, such as from JWST and the GLEAM radio survey. These GMM components are then used as a patch based image prior. For all of our analyses, we adopt patch priors based on the GLEAM radio survey, as these priors tend to impose relatively weaker correlations between neighboring pixels. A primary limitation of patch-based image priors is the imposition of a single spatial scale for features in the reconstruction. To partially circumvent this effect, we select an oversampling factor. The oversampling factor $\rho$, when greater than 1, results in Jolideco computing the reconstructed image on a finer grid which is then down sampled to the resolution of the original counts image after convolution with the PSF. The likelihood of the patch priors is computed on the upsampled, reconstructed image, meaning that through choice of $\rho$, the physical size of the patch priors is modified. 
+
+\textit{Chandra}'s pointing inaccuracy of up to an arcsec makes it necessary to register observations to jointly reconstruct the same region across multiple \textit{Chandra} datasets. By cross correlating the datasets with a reference observation and by using the shift based off of the maximum of the cross correlation, this pointing inaccuracy can mostly be eliminated. However, because \textit{Chandra}'s PSF is not axisymmetric, in principle a small pointing inaccuracy can still be present after fitting the cross correlation when comparing observations of differing roll angles. Instead, we choose to perform image offset calibration as a step of the Jolideco reconstruction process. Two dimensional shifts for each observation are treated as free parameters in the reconstruction, meaning that they are fit alongside the reconstructed flux image. In principle, this allows the coordinate offsets to be optimized on the jointly reconstructed flux images, circumventing the asymmetry introduced by the PSF. This process has shown effective in calibrating the small, often sub-pixel offsets between coarsely registered observations. For both ACIS and HRC reconstructions, these offsets have been ``baked in", first by computing the reconstruction with shift calibrations on the full band (0.5-7 keV, ACIS, PI channel 10-200, HRC), saving the shifts, then by using these shifts on all other reconstructions which no longer fit the shift calibrations. 
+
+\section{Results}
+We present image reconstructions of 18 ACIS and 3 HRC observations using the Jolideco method. In Section \ref{sec:ACIS}, we present reconstructions only using the ACIS observations collected between 2015 and 2017 (see Table \ref{tab:observations}). For both the ACIS and HRC observations, the area of reconstructed flux is an approximately 9x9 arc second region centered on the nuclear point source. This region is slightly smaller than the original cut out region of 10x10 arc seconds to account for the registration process described in Section \ref{sec:methods}. We reconstruct flux maps in multiple energy bands both corresponding to the soft-hard X-ray continuum (Section \ref{sec:continuum}, Figure \ref{fig:continuum}) and of narrow bands corresponding to selected emission lines (Section \ref{sec:lines}, Figures \ref{fig:lines-soft} \& \ref{fig:lines-hard}). In Section \ref{sec:HRC}, we present reconstructions only using the HRC observations collected in 2021. These reconstructions extract additional spatial information and greater effective collection area at energies $<$ 1 keV, but at the expense of significantly reduced energy resolution. For all reconstructions presented in this work, we compare the reconstructed flux generated by using the \textsc{marx} simulated PSF, as well as the empirical PSF.
+
+\subsection{ACIS Reconstructions}\label{sec:ACIS}
+
+All reconstructions presented in this section use all 18 available ACIS observations collected between 2015 and 2017. Combined, these observations total 595.7 ks of exposure time. Unless otherwise specified, all reconstructions use upsampling, with $\rho = 2.0$. For each reconstruction, the ADAM optimizer was run for 1000 iterations with a fixed learning rate of $\gamma$ = 0.05, which was sufficient for all reconstructions to converge. For each reconstruction, an appropriate $\beta$ value was selected such that the relationship 
+\begin{equation}
+    \frac{\mathcal{C}(D_j|\lambda_j(x))}{\beta \cdot \mathcal{P}(x)} \approx 10\%
+\end{equation}
+is satisfied. 
+
+\subsubsection{Continuum}\label{sec:continuum}
+    First, we created four datasets which correspond to the overall continuum (0.5-7.0 keV), the soft X-ray continuum (0.5-2.0 keV), the hard X-ray continuum (2.0-5.0 keV) and a band containing the iron K$\alpha$ fluorescence and iron-25/iron-26 radiative recombination emission lines, as well as the hard X-ray continuum (5.0-7.0 keV). These energy bands were chosen to isolate / concentrate emission from the three dominant components of the AGN X-ray spectrum \citep{reynolds_nustar_2015}. These datasets were created by filtering the ACIS events in the energy channel, then by performing the data reduction described in Section \ref{sec:data}. For each of these energy bands, reconstructions were evaluated using both the \textsc{marx} simulated PSF of the respective energy band and the empirical PSF, weighed to the source spectrum of the AGN of Cygnus A. The empirical PSF contains counts with energies from 0.5-7.0 keV regardless of the energy band being evaluated to preserve counts in the PSF. The reconstructions are shown in Figure \ref{fig:continuum}, showing only minor differences between the two PSFs, with the differences being most apparent at the smallest spatial scales closest to the nucleus. The nuclear region shows significant extended structure. In the soft band (0.5-2.0 keV), a clear biconical structure is reconstructed with the stronger emission in the SW cone. This cone extends roughly 2 arcsec (2 kpc) in both directions from the central source. The bicone has a half opening angle roughly consistent with findings from \cite{boccardi_stratified_2016}. In the hard bands (2.0-5.0 keV, 5.0-7.0 keV), an unresolved point source with radius $\lesssim0.25$ arcsec dominates the emission. However, a small amount of extended emission is also observed which extends $\sim1$ arcsec (1 kpc) in all directions from the central source. In the band containing Fe-K$\alpha$, this emission becomes ring like, with pockets of less emission immediately surrounding the central source. 
+
+\subsubsection{Lines}\label{sec:lines}
+    In addition to reconstructing the AGN X-ray continuum, we also create datasets with energy bands which contain prominent X-ray emission lines. Similarly to Section \ref{sec:continuum}, these datasets were created by filtering the events on the energy channel and reducing the data as described in Section \ref{sec:data}. In Figure \ref{fig:lines-soft}, we show bands corresponding to the Ne IX triplet-Ne X and the Si VII-Si XIII emission lines, with both energy bands being contained in the soft X-ray continuum band (0.5-2.0 keV) explored above. Both lines moderately contribute to their respective band (Equivalent Width, $EW_{Ne} \approx 90$ eV, $EW_{Si} \approx 148$ eV, \cite{young_chandra_2002}). Both reconstructions show the same biconical structure reminiscent of the overall soft X-ray continuum band. Correlation exists between the two bands in the SW cone, while in the NE cone there are some regions of anti-correlation. We also attempt to disambiguate the spatial distribution of the Fe-K$\alpha$ fluorescent emission line and the iron-25/iron-26 radiative recombination lines by separating the 5.0-7.0 keV energy band into two bands split at 6.2 keV. The reconstructions of these bands are shown in Figure \ref{fig:lines-hard}. The reconstructions containing the fluorescent line ($EW_{FeK\alpha} = 182$ eV \cite{young_chandra_2002}) show strong correlation to the reconstructions containing the radiative recombination lines ($EW_{FeRad} = 444$eV, \cite{young_chandra_2002}). 
+
+\subsection{HRC Reconstructions} \label{sec:HRC}
+In this section, we present image reconstructions generated using Jolideco from 3 HRC observations totaling 59.7 ks in 2021. Because of the substantially improved spatial resolution of the HRC detector, we do not use upsampling for the HRC reconstructions ($\rho = 1$). Even without upsampling, the reconstructed image resolution is $\sim1.85$x greater than the ACIS reconstructions. The registration process for the HRC observations is identical to the ACIS observations. Due to the increased image resolution of the HRC observations, the ADAM optimizer was instead run for 1500 iterations with a fixed learning rate of $\gamma = 0.05$. Additionally, the relative strength of the priors was increased to avoid decomposition into point sources. The resulting $\beta$ value satisfies the expression:
+\begin{equation}
+    \frac{\mathcal{C}(D_j|\lambda_j(x))}{\beta \cdot \mathcal{P}(x)} \approx 60\%
+\end{equation}
+%[really not sure why I had to jack up the strength of the priors for this, but using 10\% it completely turns into point sources.]
+The reconstruction, presented in Figure \ref{fig:hrc}, shows overall emission dominated by an unresolved point source of radius $\lesssim0.1$ arcsec, with some extended emission in the SE direction, extending $\sim0.25$ arcsec. The rough shape of a faint bicone can also be observed, with the emission strongly favoring the western cone.
+
+% \subsection{Joint ACIS \& HRC Reconstructions} \label{sec:joint}
+
+% [not done yet, planning to do in the next 2 weeks!]
+\FloatBarrier
+\section{AGN X-ray Morphology of Cygnus A} \label{sec:discussion}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/three_color_JWST_jolideco.pdf}
+    \caption{Three color image composed of JWST observations of Pa$\alpha$ (red) \citep{ogle_jwst_2025}, Jolideco reconstructed soft X-ray (0.5-2.0 keV) flux (green), and Jolideco reconstructed hard X-ray (5.0-7.0 keV) flux (blue). The jet axis is also given as a dashed white line ($\theta_{jet}=15.5^{\circ}$ \cite{boccardi_stratified_2016}). A 0.5 arcsec (500 pc) scalebar, corresponding roughly to the angular scale of \textit{Chandra}'s PSF, is also shown.}
+    \label{fig:threecolor}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/hardness_overall.pdf}
+    \caption{Ratio of the Jolideco reconstructed soft X-ray continuum (0.5-2.0 keV) to the Jolideco reconstructed hard X-ray continuum (5.0-7.0 keV). Regions with greater hard band emission appear red, while those with greater soft band emission appear blue. The jet axis ($\theta_{jet}=15.5^{\circ}$ \cite{boccardi_stratified_2016}) and the boundary between the poloidal and toroidal regions (half-opening angle $\theta_{pol}=62^{\circ}$ \cite{boccardi_stratified_2016}) are shown as dashed white lines. A 1 arcsecond scalebar is also shown.}
+    \label{fig:hardness_overall}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/hardness_soft_lines.pdf}
+\caption{Ratio of Jolideco reconstructions which span the bands of 0.8-1.2 keV and 1.2-2.0 keV, corresponding to the Ne IX triplet-Ne X and the Si VII-Si XIII transitions, respectively. Greater relative emission from Ne is represented as blue, while greater Si emission is represented as red. As with Figure \ref{fig:hardness_overall}, the jet axis and torus extent are represented as dashed white lines. A 1 arcsecond scalebar is given.}
+    \label{fig:hardness_softlines}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/hardness_feka.pdf}
+    \caption{Ratio of Jolideco reconstructions which span 5.0-6.2 keV and 6.2-7.0 keV, corresponding to the FeK$\alpha$ fluorescence and Fe XXV/Fe XXVI radiative recombination lines, respectively. Greater emission in the 6.2-7.0 keV band is represented as red, while greater 5.0-6.2 keV emission is represented as blue. As with Figure \ref{fig:hardness_overall}, the jet axis and torus extent are represented as dashed white lines. A 1 arcsecond scalebar is given.}
+    \label{fig:hardness_hardlines}
+\end{figure}
+
+To contextualize the image reconstructions of the nuclear region of Cygnus A we generate using Jolideco, we compare the X-ray reconstructed flux to IR observations with JWST. In Figure \ref{fig:threecolor}, we show JWST observations \citep{ogle_jwst_2025} of the same region as the image reconstructions. All three channels were aligned by placing the peak of the reconstructed hard X-ray flux at the same position as the peak of the Pa$\alpha$ emission. The outer edge of the biconical structure in the soft X-ray continuum strongly correlates with the edges of the bicone as they appear in Pa $\alpha$. No significant correlation is seen between the emission in the Pa $\alpha$ lobe seen in the NE. In other regions of the NE cone, some anticorrelation can be observed. Within the hard X-ray continuum ring, the greater hard X-ray flux is correlated with relatively less soft band X-ray emission. 
+
+%[Here Ill talk about the radio (VLA) \citep{carilli_imaging_2019}, IR (JWST) \citep{ogle_jwst_2025} and optical (HST) followups we have for Cygnus A.]
+
+%[basically what goes here is seeing if we can line up our observations with what is in Figure \ref{fig:morphology}]
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1.0\linewidth]{figures/morphology.png}
+%     \caption{}
+%     \label{fig:morphology}
+% \end{figure}
+
+We also examine the relative contributions of the reconstructed flux in different bands in the form of multiple, spatially resolved "hardness ratios". The three X-ray continuum bands selected correlate with the three dominant X-ray source components as fit by \cite{reynolds_nustar_2015}. In their analysis, the three components are associated with cold ICM (which contributes most strongly in the 0.5-2.0 keV band), the hot ICM (dominant in the 2.0-5.0 keV band), and reflection from the AGN central source (dominant in the 5.0-7.0 keV band). The hardness ratio between the 0.5-2.0 keV band and the 5.0-7.0 keV band is presented in Figure \ref{fig:hardness_overall}. Notably, in the direction of the SE facing cone, the hardness of the hard X-ray continuum ring is lower than that of any other region of the ring. However, much less reduction is seen in the direction of the NE facing cone. The hardest regions of the ring are seen in the regions of the ring which do not intersect the bicone. 
+
+Instead examining just the soft X-ray emission, we present a similar hardness ratio analysis in Figure \ref{fig:hardness_softlines}, demonstrating the relative emission from the energy bands containing X-ray emission lines of neon and silicon. The figure demonstrates that there is little correlation between the two bands, and no significant correlation corresponding to regions in the bicone or other features. Focusing on the hard X-ray band, we also examine the spatial separation between the iron fluorescence and iron recombination lines in Figure \ref{fig:hardness_hardlines}, the former being associated with AGN reflection from cold ICM, while the later is associated with hot ICM. Some correlation can be seen in the central (in angle) regions of both the wind and the torus (parallel and perpendicular to the jet axis), with these regions showing a greater contribution from lower energies (5.0-6.2 keV).
+
+\subsection{Cygnus A-2}
+While not completed in this work, an stricter upper limit on the X-ray luminosity of Cygnus A-2 can be set from the Jolideco image reconstructions of the ACIS observations from 0.5-7.0 keV. There is no detectable flux over density at the location of Cygnus A-2 in any of the reconstructed bands, which is consistent with findings from \cite{de_vries_evidence_2019}. 
+
+\section{Conclusions}
+
+Jolideco is capable of revealing smaller scale spatial features across multiple energy filters in \textit{Chandra} observations of Cygnus A between 2015 and 2017. These reconstructions are relatively stable under choice of PSF approximation, given that any empirical PSF used has sufficient counts to effectively sample the PSF wings. However, a more exhaustive analysis of the impact of the specific choice of PSF approximation should be performed to rule out systematic bias as a source of the features present in the reconstructed flux images. Deconvolution analysis can be applied to the plethora of other well studied sources in the \textit{Chandra} X-ray catalog. Jolideco image reconstructions reveal new details about the structure and composition of the nuclear region of Cygnus A including the wind and dusty torus, as well as the surrounding ICM.
+
+
+\begin{acknowledgments}
+I would like to personally thank Dr. Jonathan McDowell and Dr. Matthew Ashby for their support throughout this project.
+
+The authors would also like to thank all of the many contributors who support the plethora of open source software that this science is built upon. More specifically, we would like to thank the numpy, scipy, pytorch, astropy, gammapy, CIAO, and matplotlib teams for their generous contribution to the body of public science.
+
+The authors acknowledge support from the SAO Astronomy Summer Program and the \textit{Chandra} X-ray Center, which is operated by the Smithsonian Astrophysical Observatory for and on behalf of the National Aeronautics Space Administration under contract NAS8-03060.
+\end{acknowledgments}
+\bibliography{startingbib}{}
+\bibliographystyle{aasjournalv7}
+
+
+\end{document}
+
+
+%Chapter 1 (Intro) - Explain (or cite explanations) everything you'd need to know to understand the methods you employed and the results produced if you're not familiar with the field.
+%Chapter 2 (Methods) - Explain in detail all of the tools/data/processes/workflows that you used to make your results.
+%Chapter 3 (Results) - Explain your figures like you would in a research meeting and make sure to mention any assumptions / parameters / extra metadata that you'd need to recreate your figures assuming you had the %tools that you use in the paper.
+%Chapter 4 (Discussion) - Explain (or cite explanations) everything you need to know to put your results in context of other people's work, and what your results actually mean physically. 
+%Chapter 5 (Conclusion) - Summarize the results and discussion
